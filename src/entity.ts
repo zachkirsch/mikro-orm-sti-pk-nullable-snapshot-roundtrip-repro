@@ -10,6 +10,15 @@ export enum AnimalType {
   CAT = "cat",
 }
 
+// Per-subtype branded id types, so references are type-safe (a DogId can't be
+// passed where a CatId is expected).
+type DogId = string & { readonly __brand: "DogId" };
+type CatId = string & { readonly __brand: "CatId" };
+
+let counter = 0;
+const makeId = <T extends string>(prefix: string): T =>
+  `${prefix}_${++counter}` as T;
+
 @Entity({
   tableName: "animal",
   abstract: true,
@@ -17,8 +26,8 @@ export enum AnimalType {
   discriminatorMap: { dog: "Dog", cat: "Cat" },
 })
 export abstract class Animal {
-  @PrimaryKey({ type: "number" })
-  id!: number;
+  @PrimaryKey({ type: "string" })
+  id!: string;
 
   @Enum({ items: () => AnimalType })
   type!: AnimalType;
@@ -29,10 +38,12 @@ export abstract class Animal {
 
 @Entity({ discriminatorValue: "dog" })
 export class Dog extends Animal {
-  // Re-declaring the inherited primary key in an STI child is what makes the
-  // root PK get serialized as `nullable: true`.
-  @PrimaryKey({ type: "number" })
-  id!: number;
+  // Re-declared so this subtype gets its own branded id type AND its own id
+  // prefix ("dog_..."). Neither is expressible on the abstract base — the base
+  // can't know each subtype's prefix or narrowed id type. This is the same
+  // pattern as a per-subtype `generateRid(...)` default.
+  @PrimaryKey({ type: "string" })
+  id: DogId = makeId<DogId>("dog");
 
   @Property({ type: "boolean", nullable: true })
   goodBoy?: boolean;
@@ -40,8 +51,8 @@ export class Dog extends Animal {
 
 @Entity({ discriminatorValue: "cat" })
 export class Cat extends Animal {
-  @PrimaryKey({ type: "number" })
-  id!: number;
+  @PrimaryKey({ type: "string" })
+  id: CatId = makeId<CatId>("cat");
 
   @Property({ type: "number", nullable: true })
   lives?: number;

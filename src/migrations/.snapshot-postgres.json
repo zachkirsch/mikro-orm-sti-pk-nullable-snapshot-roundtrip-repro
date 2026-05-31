@@ -27,20 +27,20 @@
         },
         "id": {
           "name": "id",
-          "type": "int",
+          "type": "varchar(255)",
           "unsigned": false,
-          "autoincrement": true,
+          "autoincrement": false,
           "primary": true,
           "nullable": true,
           "unique": false,
-          "length": null,
+          "length": 255,
           "precision": null,
           "scale": null,
           "default": null,
           "comment": null,
           "collation": null,
           "enumItems": [],
-          "mappedType": "integer"
+          "mappedType": "string"
         },
         "lives": {
           "name": "lives",
