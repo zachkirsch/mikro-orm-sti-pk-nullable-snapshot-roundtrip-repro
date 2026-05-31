@@ -1,9 +1,34 @@
-# STI primary key is serialized `nullable: true` when a child re-declares it (Postgres)
+# STI primary key is treated as `nullable` when a child re-declares it (postgres)
 
-In single-table inheritance, when a child entity re-declares the inherited `@PrimaryKey`, the **root** entity's primary-key column is treated as a subtype-specific column and marked `"nullable": true`. Because the column is a primary key it is actually `NOT NULL`, so the metadata is self-contradictory:
+In single-table inheritance, when a child entity re-declares the inherited `@PrimaryKey`, the **root** primary-key column is marked `nullable: true` in metadata. Because it's a primary key it is actually `NOT NULL`, so MikroORM's own schema generator contradicts itself:
 
-- `migration:create` emits the PK column as nullable — `create table "animal" ("id" varchar(255) null, ..., primary key ("id"))` — and records `"nullable": true` in the snapshot.
-- `migrator.up()` then rewrites the snapshot from introspection (`nullable: false`), dirtying the committed file even though nothing changed; `migration:create` run again wants to `alter column "id" set not null`.
+- the generated `CREATE TABLE` declares the PK column as `null`, and
+- `schema:update` against an in-sync database wants to **drop NOT NULL from the primary key**.
+
+## Repro
+
+```
+# terminal 1
+docker compose up
+
+# terminal 2
+npm install
+npm run repro
+```
+
+Output:
+
+```
+metadata: animal.id primary=true nullable=true
+
+=== getCreateSchemaSQL (note the primary key column) ===
+
+create table "animal" ("id" varchar(255) null, "type" text not null, ..., primary key ("id"));
+
+=== schema:update against an in-sync database (expected: empty) ===
+
+alter table "animal" alter column "id" drop not null;
+```
 
 ## Why re-declare the PK? (this is not gratuitous)
 
@@ -17,33 +42,11 @@ export class Dog extends Animal {
 }
 ```
 
-This is exactly the common `id = generateRid<DogId>("dog")` pattern. Without re-declaring, every subtype's `id` is the base type with the base default, losing per-subtype type safety and id prefixes. The re-declaration is semantically identical to the inherited PK (same column, same type, same primary key), so it should be a no-op at the schema level.
-
-## Repro
-
-```
-# terminal 1
-docker compose up
-
-# terminal 2
-npm install
-npm run repro   # runs orm.migrator.up()
-git diff        # src/migrations/.snapshot-postgres.json has been rewritten
-```
-
-Expected: clean `git diff`, and a primary key that is `NOT NULL` in the generated migration.
-
-Actual: the snapshot records the PK as nullable and `migrator.up()` flips it:
-
-```diff
-           "primary": true,
--          "nullable": true,
-+          "nullable": false,
-```
+This is the common `id = generateRid<DogId>("dog")` pattern. The re-declaration is semantically identical to the inherited PK (same column, same type, same primary key), so it should be a no-op — instead it flips the root PK to nullable.
 
 ## Root cause
 
-The STI property-merge in `MetadataDiscovery` re-adds the child's (inherited) PK to the root with `nullable = true` (intended for genuinely subtype-specific columns), which clobbers the root primary key's NOT NULL.
+The STI property-merge in `MetadataDiscovery` re-adds the child's (inherited) primary key to the root with `nullable = true` (intended for genuinely subtype-specific columns), which clobbers the root primary key's NOT NULL.
 
 ## Versions
 
