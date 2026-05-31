@@ -1,0 +1,23 @@
+{
+  "name": "mikro-orm-sti-pk-nullable-snapshot-roundtrip-repro",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "repro": "tsx src/repro.ts",
+    "migrate": "mikro-orm migration:create"
+  },
+  "dependencies": {
+    "@mikro-orm/core": "^7.1.4-dev.0",
+    "@mikro-orm/decorators": "^7.1.4-dev.0",
+    "@mikro-orm/migrations": "^7.1.4-dev.0",
+    "@mikro-orm/postgresql": "^7.1.4-dev.0",
+    "reflect-metadata": "^0.2.2"
+  },
+  "devDependencies": {
+    "@mikro-orm/cli": "^7.1.4-dev.0",
+    "@types/node": "^25.5.0",
+    "@types/pg": "^8.11.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.8.0"
+  }
+}
