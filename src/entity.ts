@@ -38,10 +38,6 @@ export abstract class Animal {
 
 @Entity({ discriminatorValue: "dog" })
 export class Dog extends Animal {
-  // Re-declared so this subtype gets its own branded id type AND its own id
-  // prefix ("dog_..."). Neither is expressible on the abstract base — the base
-  // can't know each subtype's prefix or narrowed id type. This is the same
-  // pattern as a per-subtype `generateRid(...)` default.
   @PrimaryKey({ type: "string" })
   id: DogId = makeId<DogId>("dog");
 
